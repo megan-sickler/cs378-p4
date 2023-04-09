@@ -25,21 +25,40 @@ const analytics = getAnalytics(app);
 
 function GroceryListApp() {
 
-  // Item name in the "new item" text box.
   const [itemList, setItemList] = useState([]);
   const [currentUser, setCurrentUser] = useState("");
   const [loggedOut, setLoggedOut] = useState(false);
 
+  const addItemToDatabase = (itemName) => {
+    const sampleDict = {
+      item: itemName
+    };
+    return fetch(`${firebaseConfig.databaseURL + "/userData/" + currentUser}/.json`, {
+      method: "PUT",
+      body: JSON.stringify(sampleDict)
+    }).then((res) => {
+      if (res.status !== 200) {
+        alert("There was an error: " + res.statusText);
+        // throw new Error(res.statusText);
+      } else {
+        alert("Successfully sent. Check Firebase console.");
+        return;
+      }
+    });
+  };
+
   const transferEmailFromPopup = (email) => {
-    setCurrentUser(email);
+    var indexOfAmpersand = email.indexOf("@");
+    setCurrentUser(email.slice(0, indexOfAmpersand));
     setLoggedOut(false);
   }
 
   const addItemIfEnter = (event) => {
     if (event.key === "Enter") {
-      var newItemList = itemList.slice();
-      newItemList.push(event.target.value);
-      setItemList(newItemList);
+      addItemToDatabase(event.target.value);
+      // var newItemList = itemList.slice();
+      // newItemList.push(event.target.value);
+      // setItemList(newItemList);
       event.target.value = '';
     }
   }
