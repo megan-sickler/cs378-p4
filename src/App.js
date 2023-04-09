@@ -5,6 +5,7 @@ import './App.css';
 // firebase imports
 import { initializeApp } from "firebase/app";
 import { getAnalytics } from "firebase/analytics";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
 
 // my web app's firebase configuration
 const firebaseConfig = {
@@ -29,8 +30,8 @@ function GroceryListApp() {
   const [currentUser, setCurrentUser] = useState("");
   const [loggedOut, setLoggedOut] = useState(false);
 
-  const transferUsernameFromPopup = (username) => {
-    setCurrentUser(username);
+  const transferEmailFromPopup = (email) => {
+    setCurrentUser(email);
     setLoggedOut(false);
   }
 
@@ -80,20 +81,30 @@ function GroceryListApp() {
         <p>Current User: {currentUser}</p>
         <button onClick={logOut}>Log Out</button>
       </div>
-      <PopUp sendUsernameToListScreen={transferUsernameFromPopup} isLoggedOut={loggedOut}></PopUp>
+      <LogInPopUp sendEmailToListScreen={transferEmailFromPopup} isLoggedOut={loggedOut}></LogInPopUp>
     </div>
   );
 }
 
-function PopUp({sendUsernameToListScreen, isLoggedOut}) {
+function LogInPopUp(props) {
 
   const [showForm, setShowForm] = useState(true);
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [needsToSignUp, setNeedsToSignUp] = useState(false);
 
-  // Updates internal username variable.
-  const handleUsernameChange = (event) => {
-    setUsername(event.target.value);
+  const tellLoginScreenSignUp = () => {
+    setNeedsToSignUp(false);
+  }
+  
+  const handleSignUp = () => {
+    setNeedsToSignUp(true);
+    setShowForm(true);
+  }
+
+  // Updates internal email variable.
+  const handleEmailChange = (event) => {
+    setEmail(event.target.value);
   }
 
   // Updates internal password variable.
@@ -108,24 +119,92 @@ function PopUp({sendUsernameToListScreen, isLoggedOut}) {
   }
 
   function loginSubmit () {
-    if ((username === "test" && password === "login") || (username === "te" && password === "lo")) { //TODO: change!!
-      sendUsernameToListScreen(username);
-      setShowForm(false);
-      setUsername("");
-      setPassword("");
-    } else {
-      alert("Username and/or password are incorrect.");
-    }
+    setEmail("");
+    setPassword("");
+    const auth = getAuth();
+    signInWithEmailAndPassword(auth, email, password)
+      .then((userCredential) => {
+        // Signed in 
+        const user = userCredential.user;
+        props.sendEmailToListScreen(email);
+        setShowForm(false);
+        // ...
+      })
+      .catch((error) => {
+        const errorCode = error.code;
+        const errorMessage = error.message;
+        alert(errorMessage);
+      });
   }
 
   return (
     <>
-      <div id="behind-popup" className={showForm || isLoggedOut ? null: "disappear"}>
+      <SignInPopUp needsToSignUp={needsToSignUp} tellLoginScreenSignUp={tellLoginScreenSignUp} setNeedsToSignUp={setNeedsToSignUp}></SignInPopUp>
+      <div id="behind-popup" className={((showForm || props.isLoggedOut) && !needsToSignUp) ? null : "disappear"}>
         <div id="popup">
           <h1>Log In</h1>
-          <input type="text" className="login-fields" name="username" placeholder="username" value={username} onChange={handleUsernameChange}></input><br></br>
+          <input type="text" className="login-fields" name="email" placeholder="email" value={email} onChange={handleEmailChange}></input><br></br>
           <input type="text" className="login-fields" name="password" placeholder="password" value={password} onChange={handlePasswordChange} onKeyDown={submitIfEnter}></input><br></br>
           <button id="login-submit" onClick={loginSubmit}>Submit</button>
+          <p onClick={handleSignUp}>Don't have an account yet? Click <u>here</u> to sign up!</p>
+        </div>
+      </div>
+    </>
+  )
+}
+
+function SignInPopUp(props) {
+
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+
+  // Updates internal email variable.
+  const handleEmailChange = (event) => {
+    setEmail(event.target.value);
+  }
+
+  // Updates internal password variable.
+  const handlePasswordChange = (event) => {
+    setPassword(event.target.value);
+  }
+
+  const submitIfEnter = (event) => {
+    if (event.key === "Enter") {
+      signUpSubmit();
+    }
+  }
+
+  function signUpSubmit () {
+    if (email === "" || password === "") { //TODO: change!!
+      alert("email and/or password fields are blank.");
+    } else {
+      props.setNeedsToSignUp(false);
+      props.tellLoginScreenSignUp();
+      setEmail("");
+      setPassword("");
+      const auth = getAuth();
+      createUserWithEmailAndPassword(auth, email, password)
+        .then((userCredential) => {
+          // Signed in 
+          const user = userCredential.user;
+          // ...
+        })
+        .catch((error) => {
+          const errorCode = error.code;
+          const errorMessage = error.message; //TODO: alert this error message
+          // ..
+        });
+    } 
+  }
+
+  return (
+    <>
+      <div id="behind-popup" className={props.needsToSignUp ? null : "disappear"}>
+        <div id="popup">
+          <h1>Sign Up</h1>
+          <input type="text" className="login-fields" name="email" placeholder="email" value={email} onChange={handleEmailChange}></input><br></br>
+          <input type="text" className="login-fields" name="password" placeholder="password" value={password} onChange={handlePasswordChange} onKeyDown={submitIfEnter}></input><br></br>
+          <button id="login-submit" onClick={signUpSubmit}>Submit</button>
         </div>
       </div>
     </>
