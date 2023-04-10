@@ -85,3 +85,7 @@ input[type="text"] {
   left: 0%;
   width: 100%;
 }
+
+#signup-question {
+  margin: 20px;
+}

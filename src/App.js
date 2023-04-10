@@ -4,7 +4,6 @@ import './App.css';
 
 // firebase imports
 import { initializeApp } from "firebase/app";
-import { getAnalytics } from "firebase/analytics";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
 
 // my web app's firebase configuration
@@ -21,48 +20,16 @@ const firebaseConfig = {
 
 // initializing firebase
 const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
 
+// the main grocery list page
 function GroceryListApp() {
 
+  // variables for the main grocery list page
   const [itemList, setItemList] = useState([]);
   const [currentUser, setCurrentUser] = useState("");
   const [loggedOut, setLoggedOut] = useState(false);
 
-  const addItemToDatabase = (itemName) => {
-    const sampleDict = {
-      item: itemName
-    };
-    return fetch(`${firebaseConfig.databaseURL + "/userData/" + currentUser}/.json`, {
-      method: "PUT",
-      body: JSON.stringify(sampleDict)
-    }).then((res) => {
-      if (res.status !== 200) {
-        alert("There was an error: " + res.statusText);
-        // throw new Error(res.statusText);
-      } else {
-        alert("Successfully sent. Check Firebase console.");
-        return;
-      }
-    });
-  };
-
-  const transferEmailFromPopup = (email) => {
-    var indexOfAmpersand = email.indexOf("@");
-    setCurrentUser(email.slice(0, indexOfAmpersand));
-    setLoggedOut(false);
-  }
-
-  const addItemIfEnter = (event) => {
-    if (event.key === "Enter") {
-      addItemToDatabase(event.target.value);
-      // var newItemList = itemList.slice();
-      // newItemList.push(event.target.value);
-      // setItemList(newItemList);
-      event.target.value = '';
-    }
-  }
-
+  // item list mapping to html
   const itemListRepresentation = itemList.map((item, index) => {
     return (
       <div className="item" key={index}>
@@ -72,6 +39,68 @@ function GroceryListApp() {
     );
   })
 
+  // updates the database of items with a new list of items
+  const updateDatabase = (newItemList) => {
+    const sampleDict = {
+      items: newItemList
+    };
+    return fetch(`${firebaseConfig.databaseURL + "/userData/" + currentUser}/.json`, {
+      method: "PUT",
+      body: JSON.stringify(sampleDict)
+    }).then((res) => {
+      if (res.status !== 200) {
+        alert("There was an error: " + res.statusText);
+        throw new Error(res.statusText);
+      }
+    });
+  };
+
+  // update item list with the list of this user's items from the database
+  const getDatabaseItems = () => {
+    fetch(`${firebaseConfig.databaseURL + "/userData/" + currentUser}/.json`)
+      .then((res) => {
+        if (res.status !== 200) {
+          alert("There was an error: " + res.statusText);
+          throw new Error(res.statusText);
+        } else {
+          return res.json();
+        }
+      })
+      .then((res) => {
+        if (res) {
+          const items = res["items"];
+          setItemList(items);
+        }
+      });
+  };
+
+  // method passes control from login page to list page
+  // sets current user field, closes login popup, and populates list of items
+  const passingControlFromLoginPage = (email) => {
+    var indexOfAmpersand = email.indexOf("@");
+    setCurrentUser(email.slice(0, indexOfAmpersand));
+    setLoggedOut(false);
+    getDatabaseItems();
+  }
+
+  // adds item to grocery list
+  const addItemIfEnter = (event) => {
+    
+    // checks if the 'enter' key was it
+    if (event.key === "Enter") {
+      
+      // makes an updates item list and reflects changes on screen & in database
+      var newItemList = itemList.slice();
+      newItemList.push(event.target.value);
+      setItemList(newItemList);
+      updateDatabase(newItemList);
+      
+      // reset input box
+      event.target.value = '';
+    }
+  }
+
+  // transfers control back to login page
   function logOut() {
     setItemList([]);
     setLoggedOut(true);
@@ -81,6 +110,7 @@ function GroceryListApp() {
     <div className="App">
       <h1>Grocery List</h1>
       
+      {/* grocery list and 'new item' box */}
       <div className="list">
         {itemListRepresentation}
         <div className="new-item">
@@ -95,62 +125,66 @@ function GroceryListApp() {
         </div>
       </div>
 
-
+      {/* username and logout button */}
       <div id="user-info">
         <p>Current User: {currentUser}</p>
         <button onClick={logOut}>Log Out</button>
       </div>
-      <LogInPopUp sendEmailToListScreen={transferEmailFromPopup} isLoggedOut={loggedOut}></LogInPopUp>
+      
+      {/* popup for login page */}
+      <LoginPopup sendEmailToListScreen={passingControlFromLoginPage} isLoggedOut={loggedOut}></LoginPopup>
     </div>
   );
 }
 
-function LogInPopUp(props) {
+// popup for the login page
+function LoginPopup(props) {
 
+  // variables for the login popup
   const [showForm, setShowForm] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [needsToSignUp, setNeedsToSignUp] = useState(false);
+  const [showSignup, setShowSignup] = useState(false);
 
-  const tellLoginScreenSignUp = () => {
-    setNeedsToSignUp(false);
+  // passes control from the signup page to the login page
+  const passingControlFromSignupPage = () => {
+    setShowSignup(false);
   }
   
+  // shows signup page
   const handleSignUp = () => {
-    setNeedsToSignUp(true);
+    setShowSignup(true);
     setShowForm(true);
   }
 
-  // Updates internal email variable.
+  // updates internal email variable
   const handleEmailChange = (event) => {
     setEmail(event.target.value);
   }
 
-  // Updates internal password variable.
+  // updates internal password variable
   const handlePasswordChange = (event) => {
     setPassword(event.target.value);
   }
 
+  // submits the login page upon press of enter key
   const submitIfEnter = (event) => {
     if (event.key === "Enter") {
       loginSubmit();
     }
   }
 
+  // submits the login form to firebase auth
   function loginSubmit () {
     setEmail("");
     setPassword("");
     const auth = getAuth();
     signInWithEmailAndPassword(auth, email, password)
       .then((userCredential) => {
-        // Signed in 
-        const user = userCredential.user;
-        props.sendEmailToListScreen(email);
+        props.passingControlFromLoginPage(email);
         setShowForm(false);
-        // ...
       })
       .catch((error) => {
-        const errorCode = error.code;
         const errorMessage = error.message;
         alert(errorMessage);
       });
@@ -158,72 +192,71 @@ function LogInPopUp(props) {
 
   return (
     <>
-      <SignInPopUp needsToSignUp={needsToSignUp} tellLoginScreenSignUp={tellLoginScreenSignUp} setNeedsToSignUp={setNeedsToSignUp}></SignInPopUp>
-      <div id="behind-popup" className={((showForm || props.isLoggedOut) && !needsToSignUp) ? null : "disappear"}>
+      {/* sign in popup, hidden till necessary */}
+      <SignupPopup needsToSignUp={showSignup} tellLoginScreenSignUp={passingControlFromSignupPage} setNeedsToSignUp={setShowSignup}></SignupPopup>
+      
+      {/* log in page with disappearing functionality */}
+      <div id="behind-popup" className={((showForm || props.isLoggedOut) && !showSignup) ? null : "disappear"}>
         <div id="popup">
           <h1>Log In</h1>
           <input type="text" className="login-fields" name="email" placeholder="email" value={email} onChange={handleEmailChange}></input><br></br>
           <input type="text" className="login-fields" name="password" placeholder="password" value={password} onChange={handlePasswordChange} onKeyDown={submitIfEnter}></input><br></br>
           <button id="login-submit" onClick={loginSubmit}>Submit</button>
-          <p onClick={handleSignUp}>Don't have an account yet? Click <u>here</u> to sign up!</p>
+          <p onClick={handleSignUp} id="signup-question">Don't have an account yet? Click <u>here</u> to sign up!</p>
         </div>
       </div>
     </>
   )
 }
 
-function SignInPopUp(props) {
+// popup for the signup page
+function SignupPopup(props) {
 
+  // variable for the signin page
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  // Updates internal email variable.
+  // updates internal email variable
   const handleEmailChange = (event) => {
     setEmail(event.target.value);
   }
 
-  // Updates internal password variable.
+  // updates internal password variable
   const handlePasswordChange = (event) => {
     setPassword(event.target.value);
   }
 
+  // submits the sign up form upon press of 'enter' key
   const submitIfEnter = (event) => {
     if (event.key === "Enter") {
-      signUpSubmit();
+      signupSubmit();
     }
   }
 
-  function signUpSubmit () {
-    if (email === "" || password === "") { //TODO: change!!
-      alert("email and/or password fields are blank.");
-    } else {
-      props.setNeedsToSignUp(false);
-      props.tellLoginScreenSignUp();
-      setEmail("");
-      setPassword("");
-      const auth = getAuth();
-      createUserWithEmailAndPassword(auth, email, password)
-        .then((userCredential) => {
-          // Signed in 
-          const user = userCredential.user;
-          // ...
-        })
-        .catch((error) => {
-          const errorCode = error.code;
-          const errorMessage = error.message; //TODO: alert this error message
-          // ..
-        });
-    } 
-  }
+  // submits the signup form
+  function signupSubmit() {
+    const auth = getAuth();
+    createUserWithEmailAndPassword(auth, email, password)
+      .then((userCredential) => {
+        props.setNeedsToSignUp(false);
+        props.tellLoginScreenSignUp();
+        setEmail("");
+        setPassword("");
+      })
+      .catch((error) => {
+        alert(error.message);
+      });
+  } 
 
   return (
     <>
+      {/* signup popup that disappears when not necessary */}
       <div id="behind-popup" className={props.needsToSignUp ? null : "disappear"}>
         <div id="popup">
           <h1>Sign Up</h1>
           <input type="text" className="login-fields" name="email" placeholder="email" value={email} onChange={handleEmailChange}></input><br></br>
           <input type="text" className="login-fields" name="password" placeholder="password" value={password} onChange={handlePasswordChange} onKeyDown={submitIfEnter}></input><br></br>
-          <button id="login-submit" onClick={signUpSubmit}>Submit</button>
+          <button id="login-submit" onClick={signupSubmit}>Submit</button>
         </div>
       </div>
     </>
