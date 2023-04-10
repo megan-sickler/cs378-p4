@@ -59,7 +59,7 @@ function GroceryListApp() {
   };
 
   // update item list with the list of this user's items from the database
-  const getDatabaseItems = () => {
+  const getDatabaseItems = (currentUser) => {
     fetch(`${firebaseConfig.databaseURL + "/userData/" + currentUser}/.json`)
       .then((res) => {
         if (res.status !== 200) {
@@ -85,7 +85,7 @@ function GroceryListApp() {
     var indexOfAmpersand = email.indexOf("@");
     setCurrentUser(email.slice(0, indexOfAmpersand));
     setLoggedOut(false);
-    getDatabaseItems();
+    getDatabaseItems(email.slice(0, indexOfAmpersand));
   }
 
   // adds item to grocery list
