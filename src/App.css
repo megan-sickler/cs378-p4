@@ -89,3 +89,7 @@ input[type="text"] {
 #signup-question {
   margin: 20px;
 }
+
+button {
+  color: black;
+}
