@@ -132,7 +132,7 @@ function GroceryListApp() {
       </div>
       
       {/* popup for login page */}
-      <LoginPopup sendEmailToListScreen={passingControlFromLoginPage} isLoggedOut={loggedOut}></LoginPopup>
+      <LoginPopup passingControlFromLoginPage={passingControlFromLoginPage} isLoggedOut={loggedOut}></LoginPopup>
     </div>
   );
 }
