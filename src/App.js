@@ -72,7 +72,9 @@ function GroceryListApp() {
       .then((res) => {
         if (res) {
           const items = res["items"];
-          setItemList(items);
+          if (items != null) {
+            setItemList(items);
+          }
         }
       });
   };
