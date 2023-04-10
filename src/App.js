@@ -21,6 +21,9 @@ const firebaseConfig = {
 // initializing firebase
 const app = initializeApp(firebaseConfig);
 
+// initialize Firebase Authentication and get a reference to the service
+const auth = getAuth(app);
+
 // the main grocery list page
 function GroceryListApp() {
 
